@@ -2,7 +2,7 @@
 import os
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -10,10 +10,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from flask import Flask
 import threading
 
-# --------- Токен ---------
-TOKEN = os.getenv("TOKEN")  # будет браться из переменной окружения Render
-
 # --------- Настройки ---------
+TOKEN = os.getenv("TOKEN")  # берем токен из Render
+PORT = int(os.getenv("PORT", 8000))
+
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -28,7 +28,7 @@ class Form(StatesGroup):
     control = State()
     action = State()
 
-# --------- START ---------
+# --------- Команда /start ---------
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
     kb = InlineKeyboardBuilder()
@@ -38,30 +38,35 @@ async def start(message: types.Message, state: FSMContext):
         reply_markup=kb.as_markup()
     )
 
-@dp.callback_query(F.data == "start_check")
+# --------- Обработка кнопки "Начать чек" ---------
+@dp.callback_query(lambda c: c.data == "start_check")
 async def start_check(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()  # убираем "часики" на кнопке
     kb = InlineKeyboardBuilder()
-    for txt in ["нет", "немного", "нормально тянет", "очень сильно"]:
-        kb.button(text=txt, callback_data=txt)
+    for option in ["нет", "немного", "нормально тянет", "очень сильно"]:
+        kb.button(text=option, callback_data=f"craving_{option}")
     await callback.message.answer("Тебя сейчас тянет?", reply_markup=kb.as_markup())
     await state.set_state(Form.craving)
 
-# --------- Далее добавляем остальные состояния FSM (craving_level, trigger, emotions, thoughts, control, action)
-# Можно скопировать из полного примера, который я присылал ранее
+# --------- Обработка выбора тяги ---------
+@dp.callback_query(lambda c: c.data.startswith("craving_"))
+async def handle_craving(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    selected = callback.data.split("_")[1]
+    await callback.message.answer(f"Ты выбрал: {selected}\nСпасибо! Чек завершен.")
+    await state.clear()  # очищаем состояние после чека
 
+# --------- Запуск бота ---------
 async def main():
     await dp.start_polling(bot)
 
 # --------- Flask для Render Web Service ---------
 app = Flask(__name__)
-PORT = int(os.environ.get("PORT", 8000))
 
 @app.route("/")
 def home():
     return "Bot is running"
 
 if __name__ == "__main__":
-    # Запускаем бота в отдельном потоке
     threading.Thread(target=lambda: asyncio.run(main())).start()
-    # Запускаем Flask
     app.run(host="0.0.0.0", port=PORT)
