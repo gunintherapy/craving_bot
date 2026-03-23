@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiohttp import web
 
 # -------- TOKEN --------
@@ -20,6 +21,15 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# -------- МЕНЮ --------
+main_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🆘 SOS"), KeyboardButton(text="📝 Дневник")],
+        [KeyboardButton(text="🧘 Техники"), KeyboardButton(text="📊 Прогресс")]
+    ],
+    resize_keyboard=True
+)
+
 # -------- FSM --------
 class Form(StatesGroup):
     craving = State()
@@ -32,45 +42,35 @@ class Form(StatesGroup):
 
 # -------- START --------
 @dp.message(Command("start"))
-async def start(message: types.Message, state: FSMContext):
-    kb = InlineKeyboardBuilder()
-    kb.button(text="📔 Начать дневник", callback_data="start_check")
-    kb.button(text="🤝 Обратиться за помощью", url="https://t.me/voshodkrsk")
-    kb.adjust(1)
-
+async def start(message: types.Message):
     await message.answer(
         "Привет! 👋 Я — твой дневник тяги.\n\n"
-        "Будем вместе отслеживать моменты, когда тянет.\n"
-        "Это поможет тебе оставаться в контроле. 🔥\n\n"
-        "📔 Начни дневник или обратись за поддержкой.",
-        reply_markup=kb.as_markup()
+        "Я помогу тебе отслеживать состояние и не срываться.\n\n"
+        "Выбери действие в меню ниже 👇",
+        reply_markup=main_kb
     )
 
-# -------- START CHECK --------
-@dp.callback_query(F.data == "start_check")
-async def start_check(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-
+# -------- ДНЕВНИК --------
+@dp.message(F.text == "📝 Дневник")
+async def diary(message: types.Message, state: FSMContext):
     kb = InlineKeyboardBuilder()
     for txt in ["нет", "немного", "средне", "сильно"]:
         kb.button(text=txt, callback_data=f"c_{txt}")
     kb.adjust(1)
 
-    await callback.message.edit_text("Тебя сейчас тянет?", reply_markup=kb.as_markup())
+    await message.answer("Тебя сейчас тянет?", reply_markup=kb.as_markup())
     await state.set_state(Form.craving)
 
 # -------- CRAVING --------
 @dp.callback_query(F.data.startswith("c_"))
 async def craving(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[2:]
-    await state.update_data(craving=val)
+    await state.update_data(craving=callback.data[2:])
 
     kb = InlineKeyboardBuilder()
     for i in range(11):
         kb.button(text=str(i), callback_data=f"l_{i}")
-    kb.adjust(2)  # по 2 кнопки в ряд (удобно)
+    kb.adjust(2)
 
     await callback.message.edit_text("Насколько сильно? (0–10)", reply_markup=kb.as_markup())
     await state.set_state(Form.level)
@@ -79,9 +79,7 @@ async def craving(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("l_"))
 async def level(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = int(callback.data[2:])
-    await state.update_data(level=val)
+    await state.update_data(level=int(callback.data[2:]))
 
     kb = InlineKeyboardBuilder()
     for t in ["стресс", "скука", "одиночество", "устал"]:
@@ -95,12 +93,10 @@ async def level(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("t_"))
 async def trigger(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[2:]
-    await state.update_data(trigger=val)
+    await state.update_data(trigger=callback.data[2:])
 
     kb = InlineKeyboardBuilder()
-    for e in ["тревога", "пусто", "злюсь", "грусть"]:
+    for e in ["тревога", "злость", "грусть", "пустота"]:
         kb.button(text=e, callback_data=f"e_{e}")
     kb.adjust(1)
 
@@ -111,25 +107,21 @@ async def trigger(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("e_"))
 async def emotion(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[2:]
-    await state.update_data(emotion=val)
+    await state.update_data(emotion=callback.data[2:])
 
     kb = InlineKeyboardBuilder()
     for th in ["нет", "есть немного", "сильные"]:
         kb.button(text=th, callback_data=f"th_{th}")
     kb.adjust(1)
 
-    await callback.message.edit_text("Есть ли мысли сорваться?", reply_markup=kb.as_markup())
+    await callback.message.edit_text("Есть мысли сорваться?", reply_markup=kb.as_markup())
     await state.set_state(Form.thoughts)
 
 # -------- THOUGHTS --------
 @dp.callback_query(F.data.startswith("th_"))
 async def thoughts(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[3:]
-    await state.update_data(thoughts=val)
+    await state.update_data(thoughts=callback.data[3:])
 
     kb = InlineKeyboardBuilder()
     for c in ["контроль есть", "шатает", "нет контроля"]:
@@ -143,9 +135,7 @@ async def thoughts(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("ctrl_"))
 async def control(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[5:]
-    await state.update_data(control=val)
+    await state.update_data(control=callback.data[5:])
 
     kb = InlineKeyboardBuilder()
     for a in ["выйду", "отвлекусь", "позвоню", "подышу", "ничего"]:
@@ -159,29 +149,56 @@ async def control(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data.startswith("a_"))
 async def action(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-
-    val = callback.data[2:]
-    await state.update_data(action=val)
+    await state.update_data(action=callback.data[2:])
 
     data = await state.get_data()
-
     level = data.get("level", 0)
     thoughts = data.get("thoughts")
     control = data.get("control")
 
     if level >= 7 or thoughts == "сильные" or control == "нет контроля":
-        result = "⚠️ Сейчас высокий риск срыва.\n\nСрочно смени обстановку:\n— выйди\n— позвони\n— холодная вода"
+        result = "🆘 СТОП! Высокий риск.\nСрочно:\n— выйди\n— позвони\n— холодная вода"
     elif level >= 4:
-        result = "⚠️ Риск растёт.\n\nСделай действие:\n— смени место\n— отвлекись"
+        result = "⚠️ Риск растет.\nСмени обстановку или отвлекись."
     else:
-        result = "✅ Ты сейчас в контроле.\nПродолжай так же."
+        result = "✅ Ты в контроле. Продолжай."
 
-    if val == "ничего":
+    if data.get("action") == "ничего":
         result += "\n\nЕсли ничего не делать — станет хуже."
 
     await callback.message.edit_text(result)
-
     await state.clear()
+
+# -------- SOS --------
+@dp.message(F.text == "🆘 SOS")
+async def sos(message: types.Message):
+    await message.answer(
+        "🆘 СТОП!\n\n"
+        "Если тебя сейчас сильно тянет:\n"
+        "— выйди из места\n"
+        "— умойся холодной водой\n"
+        "— позвони кому-то\n\n"
+        "Ты не обязан срываться."
+    )
+
+# -------- ТЕХНИКИ --------
+@dp.message(F.text == "🧘 Техники")
+async def techniques(message: types.Message):
+    await message.answer(
+        "🧘 Техники:\n\n"
+        "1. Дыхание 4-4-4\n"
+        "2. Холодная вода\n"
+        "3. Смена обстановки\n\n"
+        "Выбери и сделай прямо сейчас."
+    )
+
+# -------- ПРОГРЕСС --------
+@dp.message(F.text == "📊 Прогресс")
+async def progress(message: types.Message):
+    await message.answer(
+        "📊 Пока статистика не подключена.\n"
+        "Скоро здесь будет твой прогресс."
+    )
 
 # -------- WEB SERVER --------
 async def handle(request):
@@ -192,7 +209,6 @@ async def main():
     print("🚀 Бот запущен")
 
     await bot.delete_webhook(drop_pending_updates=True)
-
     asyncio.create_task(dp.start_polling(bot))
 
     app = web.Application()
