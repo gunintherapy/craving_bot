@@ -14,14 +14,14 @@ TOKEN = os.getenv("TOKEN")
 PORT = int(os.getenv("PORT", 8000))
 
 if not TOKEN:
-    raise ValueError("TOKEN не найден!")
+    raise ValueError("❌ TOKEN не найден!")
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# -------- МЕНЮ --------
+# -------- НИЖНЕЕ МЕНЮ --------
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🆘 SOS"), KeyboardButton(text="📝 Дневник")],
@@ -40,13 +40,15 @@ class Form(StatesGroup):
     control = State()
     action = State()
 
-# -------- START --------
+# -------- START (ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ МЕНЮ) --------
 @dp.message(Command("start"))
 async def start(message: types.Message):
+    await message.answer("🔄 Обновляю меню...")
+
     await message.answer(
         "Привет! 👋 Я — твой дневник тяги.\n\n"
         "Я помогу тебе отслеживать состояние и не срываться.\n\n"
-        "Выбери действие в меню ниже 👇",
+        "Выбери действие ниже 👇",
         reply_markup=main_kb
     )
 
@@ -82,7 +84,7 @@ async def level(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(level=int(callback.data[2:]))
 
     kb = InlineKeyboardBuilder()
-    for t in ["стресс", "скука", "одиночество", "устал"]:
+    for t in ["стресс", "скука", "одиночество", "усталость", "конфликт"]:
         kb.button(text=t, callback_data=f"t_{t}")
     kb.adjust(1)
 
@@ -96,7 +98,7 @@ async def trigger(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(trigger=callback.data[2:])
 
     kb = InlineKeyboardBuilder()
-    for e in ["тревога", "злость", "грусть", "пустота"]:
+    for e in ["тревога", "злость", "грусть", "пустота", "стыд"]:
         kb.button(text=e, callback_data=f"e_{e}")
     kb.adjust(1)
 
@@ -110,7 +112,7 @@ async def emotion(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(emotion=callback.data[2:])
 
     kb = InlineKeyboardBuilder()
-    for th in ["нет", "есть немного", "сильные"]:
+    for th in ["нет", "мелькают", "крутятся постоянно"]:
         kb.button(text=th, callback_data=f"th_{th}")
     kb.adjust(1)
 
@@ -124,7 +126,7 @@ async def thoughts(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(thoughts=callback.data[3:])
 
     kb = InlineKeyboardBuilder()
-    for c in ["контроль есть", "шатает", "нет контроля"]:
+    for c in ["да", "шатает", "почти нет"]:
         kb.button(text=c, callback_data=f"ctrl_{c}")
     kb.adjust(1)
 
@@ -138,7 +140,7 @@ async def control(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(control=callback.data[5:])
 
     kb = InlineKeyboardBuilder()
-    for a in ["выйду", "отвлекусь", "позвоню", "подышу", "ничего"]:
+    for a in ["позвоню", "выйду", "подышу", "отвлекусь", "ничего"]:
         kb.button(text=a, callback_data=f"a_{a}")
     kb.adjust(1)
 
@@ -152,21 +154,40 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(action=callback.data[2:])
 
     data = await state.get_data()
+
     level = data.get("level", 0)
     thoughts = data.get("thoughts")
     control = data.get("control")
+    trigger = data.get("trigger")
 
-    if level >= 7 or thoughts == "сильные" or control == "нет контроля":
-        result = "🆘 СТОП! Высокий риск.\nСрочно:\n— выйди\n— позвони\n— холодная вода"
+    if level >= 7 or thoughts == "крутятся постоянно" or control == "почти нет":
+        text = (
+            "🆘 СТОП! ОПАСНОСТЬ.\n\n"
+            "Тебя сейчас несёт.\n\n"
+            "Сделай прямо сейчас:\n"
+            "— выйди\n"
+            "— холодная вода\n"
+            "— позвони кому-то"
+        )
     elif level >= 4:
-        result = "⚠️ Риск растет.\nСмени обстановку или отвлекись."
+        text = (
+            "⚠️ Внимание.\n\n"
+            f"Триггер: {trigger}\n\n"
+            "Сделай паузу:\n"
+            "— смени место\n"
+            "— выпей воды"
+        )
     else:
-        result = "✅ Ты в контроле. Продолжай."
+        text = (
+            "✅ Ты в контроле.\n\n"
+            "Тяга есть, но она не управляет тобой.\n"
+            "Продолжай."
+        )
 
     if data.get("action") == "ничего":
-        result += "\n\nЕсли ничего не делать — станет хуже."
+        text += "\n\nЕсли ничего не делать — станет хуже."
 
-    await callback.message.edit_text(result)
+    await callback.message.edit_text(text)
     await state.clear()
 
 # -------- SOS --------
@@ -174,9 +195,9 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
 async def sos(message: types.Message):
     await message.answer(
         "🆘 СТОП!\n\n"
-        "Если тебя сейчас сильно тянет:\n"
+        "Сейчас важно не думать, а действовать:\n\n"
         "— выйди из места\n"
-        "— умойся холодной водой\n"
+        "— холодная вода\n"
         "— позвони кому-то\n\n"
         "Ты не обязан срываться."
     )
@@ -189,15 +210,15 @@ async def techniques(message: types.Message):
         "1. Дыхание 4-4-4\n"
         "2. Холодная вода\n"
         "3. Смена обстановки\n\n"
-        "Выбери и сделай прямо сейчас."
+        "Сделай любую прямо сейчас."
     )
 
 # -------- ПРОГРЕСС --------
 @dp.message(F.text == "📊 Прогресс")
 async def progress(message: types.Message):
     await message.answer(
-        "📊 Пока статистика не подключена.\n"
-        "Скоро здесь будет твой прогресс."
+        "📊 Прогресс скоро появится.\n\n"
+        "Мы подключим аналитику."
     )
 
 # -------- WEB SERVER --------
