@@ -36,9 +36,9 @@ async def start(message: types.Message, state: FSMContext):
     kb = InlineKeyboardBuilder()
     kb.button(text="Начать чек", callback_data="start_check")
     await message.answer(
-        "Это бот для отслеживания тяги.\n\n"
-        "Займет 1–2 минуты.\n"
-        "Поможет не сорваться.",
+        "Привет! 👋 Я — твой дневник тяги.\n"
+        "Будем вместе отслеживать моменты, когда у тебя тяга.\n"
+        "Следуй шаг за шагом — и ты не потеряешь контроле! 🔥",
         reply_markup=kb.as_markup()
     )
 
