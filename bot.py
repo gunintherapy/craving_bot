@@ -38,7 +38,7 @@ async def start(message: types.Message, state: FSMContext):
     await message.answer(
         "Привет! 👋 Я — твой дневник тяги.\n"
         "Будем вместе отслеживать моменты, когда у тебя тяга.\n"
-        "Следуй шаг за шагом — и ты не потеряешь контроле! 🔥",
+        "Следуй шаг за шагом — и ты не потеряешь контроль! 🔥",
         reply_markup=kb.as_markup()
     )
 
