@@ -72,7 +72,7 @@ async def craving(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=str(i), callback_data=f"l_{i}")
     kb.adjust(5)
 
-    await callback.message.edit_text("Насколько сильно? (0–10)", reply_markup=kb.as_markup())
+    await callback.message.answer("Насколько сильно? (0–10)", reply_markup=kb.as_markup())
     await state.set_state(Form.level)
 
 # -------- LEVEL --------
@@ -86,7 +86,7 @@ async def level(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=t, callback_data=f"t_{t}")
     kb.adjust(2)
 
-    await callback.message.edit_text("Что это запустило?", reply_markup=kb.as_markup())
+    await callback.message.answer("Что это запустило?", reply_markup=kb.as_markup())
     await state.set_state(Form.trigger)
 
 # -------- TRIGGER --------
@@ -100,7 +100,7 @@ async def trigger(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=e, callback_data=f"e_{e}")
     kb.adjust(2)
 
-    await callback.message.edit_text("Что ты сейчас чувствуешь?", reply_markup=kb.as_markup())
+    await callback.message.answer("Что ты сейчас чувствуешь?", reply_markup=kb.as_markup())
     await state.set_state(Form.emotion)
 
 # -------- EMOTION --------
@@ -114,7 +114,7 @@ async def emotion(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=th, callback_data=f"th_{th}")
     kb.adjust(3)
 
-    await callback.message.edit_text("Есть мысли сорваться?", reply_markup=kb.as_markup())
+    await callback.message.answer("Есть мысли сорваться?", reply_markup=kb.as_markup())
     await state.set_state(Form.thoughts)
 
 # -------- THOUGHTS --------
@@ -128,7 +128,7 @@ async def thoughts(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=c, callback_data=f"ctrl_{c}")
     kb.adjust(3)
 
-    await callback.message.edit_text("Ты контролируешь ситуацию?", reply_markup=kb.as_markup())
+    await callback.message.answer("Ты контролируешь ситуацию?", reply_markup=kb.as_markup())
     await state.set_state(Form.control)
 
 # -------- CONTROL --------
@@ -142,7 +142,7 @@ async def control(callback: types.CallbackQuery, state: FSMContext):
         kb.button(text=a, callback_data=f"a_{a}")
     kb.adjust(2)
 
-    await callback.message.edit_text("Что сделаешь прямо сейчас?", reply_markup=kb.as_markup())
+    await callback.message.answer("Что сделаешь прямо сейчас?", reply_markup=kb.as_markup())
     await state.set_state(Form.action)
 
 # -------- ACTION --------
@@ -185,7 +185,7 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
     if data.get("action") == "ничего":
         text += "\n\nЕсли ничего не делать — станет хуже."
 
-    await callback.message.edit_text(text)
+    await callback.message.answer(text)
     await state.clear()
 
 # -------- SOS --------
@@ -225,7 +225,6 @@ async def handle(request):
 # -------- RUN --------
 async def main():
     print("🚀 Бот запущен")
-
     await bot.delete_webhook(drop_pending_updates=True)
     asyncio.create_task(dp.start_polling(bot))
 
