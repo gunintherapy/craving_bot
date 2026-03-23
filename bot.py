@@ -51,101 +51,115 @@ async def start_check(callback: types.CallbackQuery, state: FSMContext):
 
     kb = InlineKeyboardBuilder()
     for txt in ["нет", "немного", "нормально тянет", "очень сильно"]:
-        kb.button(text=txt, callback_data=txt)
+        kb.button(text=txt, callback_data=f"craving_{txt}")
 
     await callback.message.answer("Тебя сейчас тянет?", reply_markup=kb.as_markup())
     await state.set_state(Form.craving)
 
 
 # --------- CRAVING ---------
-@dp.callback_query(Form.craving)
+@dp.callback_query(F.data.startswith("craving_"))
 async def craving(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(craving=callback.data)
+
+    value = callback.data.replace("craving_", "")
+    await state.update_data(craving=value)
 
     kb = InlineKeyboardBuilder()
     for i in range(11):
-        kb.button(text=str(i), callback_data=str(i))
+        kb.button(text=str(i), callback_data=f"level_{i}")
 
     await callback.message.answer("Насколько сильно? (0–10)", reply_markup=kb.as_markup())
     await state.set_state(Form.craving_level)
 
 
 # --------- LEVEL ---------
-@dp.callback_query(Form.craving_level)
+@dp.callback_query(F.data.startswith("level_"))
 async def craving_level(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(level=int(callback.data))
+
+    value = int(callback.data.replace("level_", ""))
+    await state.update_data(level=value)
 
     kb = InlineKeyboardBuilder()
     for o in ["стресс", "скука", "устал", "одиночество", "привычка", "не понимаю"]:
-        kb.button(text=o, callback_data=o)
+        kb.button(text=o, callback_data=f"trigger_{o}")
 
     await callback.message.answer("Что это запустило?", reply_markup=kb.as_markup())
     await state.set_state(Form.trigger)
 
 
 # --------- TRIGGER ---------
-@dp.callback_query(Form.trigger)
+@dp.callback_query(F.data.startswith("trigger_"))
 async def trigger(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(trigger=callback.data)
+
+    value = callback.data.replace("trigger_", "")
+    await state.update_data(trigger=value)
 
     kb = InlineKeyboardBuilder()
     for o in ["тревожно", "пусто", "злюсь", "грусть", "раздражение", "нормально"]:
-        kb.button(text=o, callback_data=o)
+        kb.button(text=o, callback_data=f"emotion_{o}")
 
     await callback.message.answer("Что внутри сейчас?", reply_markup=kb.as_markup())
     await state.set_state(Form.emotions)
 
 
 # --------- EMOTIONS ---------
-@dp.callback_query(Form.emotions)
+@dp.callback_query(F.data.startswith("emotion_"))
 async def emotions(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(emotions=callback.data)
+
+    value = callback.data.replace("emotion_", "")
+    await state.update_data(emotions=value)
 
     kb = InlineKeyboardBuilder()
     for o in ["нет", "иногда мелькают", "крутятся постоянно"]:
-        kb.button(text=o, callback_data=o)
+        kb.button(text=o, callback_data=f"thought_{o}")
 
     await callback.message.answer("Мысли сорваться есть?", reply_markup=kb.as_markup())
     await state.set_state(Form.thoughts)
 
 
 # --------- THOUGHTS ---------
-@dp.callback_query(Form.thoughts)
+@dp.callback_query(F.data.startswith("thought_"))
 async def thoughts(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(thoughts=callback.data)
+
+    value = callback.data.replace("thought_", "")
+    await state.update_data(thoughts=value)
 
     kb = InlineKeyboardBuilder()
     for o in ["контролирую", "шатает", "почти не контролирую"]:
-        kb.button(text=o, callback_data=o)
+        kb.button(text=o, callback_data=f"control_{o}")
 
     await callback.message.answer("Ты контролируешь ситуацию?", reply_markup=kb.as_markup())
     await state.set_state(Form.control)
 
 
 # --------- CONTROL ---------
-@dp.callback_query(Form.control)
+@dp.callback_query(F.data.startswith("control_"))
 async def control(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(control=callback.data)
+
+    value = callback.data.replace("control_", "")
+    await state.update_data(control=value)
 
     kb = InlineKeyboardBuilder()
     for o in ["выйду", "отвлекусь", "позвоню", "подышу", "ничего"]:
-        kb.button(text=o, callback_data=o)
+        kb.button(text=o, callback_data=f"action_{o}")
 
     await callback.message.answer("Что сделаешь сейчас?", reply_markup=kb.as_markup())
     await state.set_state(Form.action)
 
 
 # --------- ACTION ---------
-@dp.callback_query(Form.action)
+@dp.callback_query(F.data.startswith("action_"))
 async def action(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.update_data(action=callback.data)
+
+    value = callback.data.replace("action_", "")
+    await state.update_data(action=value)
 
     data = await state.get_data()
 
@@ -154,7 +168,6 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
     control_val = data.get("control")
     trigger_val = data.get("trigger")
 
-    # ---- логика риска ----
     if level >= 7 or thoughts == "крутятся постоянно" or control_val == "почти не контролирую":
         risk = "high"
     elif level >= 4:
