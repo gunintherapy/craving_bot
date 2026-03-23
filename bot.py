@@ -1,197 +1,195 @@
+import os
 import asyncio
 import logging
-import os
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-# -----------------------
-# ТОКЕН
-# -----------------------
+# --------- TOKEN ---------
 TOKEN = os.getenv("TOKEN")
 
+if not TOKEN:
+    raise ValueError("❌ TOKEN не найден! Добавь его в Render → Environment")
+
 logging.basicConfig(level=logging.INFO)
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# -----------------------
-# ВЕБ-СЕРВЕР (для Render)
-# -----------------------
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'Bot is running')
 
-def run_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), Handler)
-    server.serve_forever()
+# --------- FSM ---------
+class Form(StatesGroup):
+    craving = State()
+    craving_level = State()
+    trigger = State()
+    emotions = State()
+    thoughts = State()
+    control = State()
+    action = State()
 
-threading.Thread(target=run_server).start()
 
-# -----------------------
-# Состояния
-# -----------------------
-class QuizStates(StatesGroup):
-    question_idx = State()
-    yes_count = State()
-
-# -----------------------
-# Вопросы
-# -----------------------
-QUESTIONS = [
-    "Он/она не может остановиться, если начал(а) употреблять?",
-    "Были обещания 'завязать', но всё повторялось?",
-    "После употребления говорит: 'это последний раз'?",
-    "Есть проблемы с работой или учёбой из-за этого?",
-    "Были долги или финансовые проблемы?",
-    "Деньги уходят на употребление, а не на жизнь?",
-    "Становится агрессивным(ой) или резко меняется настроение?",
-    "В трезвом состоянии один человек, в употреблении — другой?",
-    "Отрицает проблему или говорит 'всё под контролем'?",
-    "В семье конфликты из-за этого?",
-    "Ты пытался(ась) контролировать, но не получается?",
-    "Ты живёшь в постоянной тревоге?",
-    "Праздники невозможны без алкоголя/употребления?",
-    "Круг общения связан с употреблением?",
-    "Ситуация со временем ухудшается?",
-    "Ты боишься, что дальше будет хуже?",
-    "Ты думал(а), что нужна помощь извне?",
-    "Ты чувствуешь, что сам(а) не справляешься?"
-]
-
-# -----------------------
-# Кнопки Да / Нет
-# -----------------------
-def get_yes_no_keyboard():
-    kb = InlineKeyboardBuilder()
-    kb.button(text="✅ Да", callback_data="yes")
-    kb.button(text="❌ Нет", callback_data="no")
-    kb.adjust(2)
-    return kb.as_markup()
-
-# -----------------------
-# /start
-# -----------------------
+# --------- START ---------
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
-    await state.clear()
-
     kb = InlineKeyboardBuilder()
-    kb.button(text="📊 Пройти тест", callback_data="start_quiz")
-    kb.button(text="💬 Написать специалисту", url="https://t.me/voshodkrsk")
-    kb.adjust(1)
+    kb.button(text="Начать чек", callback_data="start_check")
 
     await message.answer(
-        "Ты пытаешься помочь близкому.\n\n"
-        "Уговариваешь, контролируешь, веришь, что он справится сам…\n\n"
-        "Но внутри уже есть тревога:\n\n"
-        "👉 А вдруг всё зашло слишком далеко?\n"
-        "👉 А если уже нужна реабилитация?\n\n"
-        "Пройди тест и посмотри честно, что происходит.",
+        "Это бот для отслеживания тяги.\n\n"
+        "Займет 1–2 минуты.\n"
+        "Поможет не сорваться.",
         reply_markup=kb.as_markup()
     )
 
-# -----------------------
-# Старт теста
-# -----------------------
-@dp.callback_query(F.data == "start_quiz")
-async def start_quiz(callback: types.CallbackQuery, state: FSMContext):
-    await state.set_state(QuizStates.question_idx)
-    await state.update_data(question_idx=0, yes_count=0)
 
-    await callback.message.answer(
-        "Я задам тебе 18 вопросов.\n\n"
-        "Отвечай честно:\n"
-        "👉 Да или Нет\n\n"
-        "Это не диагноз, но покажет реальную картину.\n\nПоехали."
-    )
-
-    await callback.message.answer(
-        f"Вопрос 1:\n\n{QUESTIONS[0]}",
-        reply_markup=get_yes_no_keyboard()
-    )
-
+# --------- START CHECK ---------
+@dp.callback_query(F.data == "start_check")
+async def start_check(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
 
-# -----------------------
-# Ответы
-# -----------------------
-@dp.callback_query(F.data.in_(["yes", "no"]))
-async def process_answer(callback: types.CallbackQuery, state: FSMContext):
+    kb = InlineKeyboardBuilder()
+    for txt in ["нет", "немного", "нормально тянет", "очень сильно"]:
+        kb.button(text=txt, callback_data=txt)
+
+    await callback.message.answer("Тебя сейчас тянет?", reply_markup=kb.as_markup())
+    await state.set_state(Form.craving)
+
+
+# --------- CRAVING ---------
+@dp.callback_query(Form.craving)
+async def craving(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(craving=callback.data)
+
+    kb = InlineKeyboardBuilder()
+    for i in range(11):
+        kb.button(text=str(i), callback_data=str(i))
+
+    await callback.message.answer("Насколько сильно? (0–10)", reply_markup=kb.as_markup())
+    await state.set_state(Form.craving_level)
+
+
+# --------- LEVEL ---------
+@dp.callback_query(Form.craving_level)
+async def craving_level(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(level=int(callback.data))
+
+    kb = InlineKeyboardBuilder()
+    for o in ["стресс", "скука", "устал", "одиночество", "привычка", "не понимаю"]:
+        kb.button(text=o, callback_data=o)
+
+    await callback.message.answer("Что это запустило?", reply_markup=kb.as_markup())
+    await state.set_state(Form.trigger)
+
+
+# --------- TRIGGER ---------
+@dp.callback_query(Form.trigger)
+async def trigger(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(trigger=callback.data)
+
+    kb = InlineKeyboardBuilder()
+    for o in ["тревожно", "пусто", "злюсь", "грусть", "раздражение", "нормально"]:
+        kb.button(text=o, callback_data=o)
+
+    await callback.message.answer("Что внутри сейчас?", reply_markup=kb.as_markup())
+    await state.set_state(Form.emotions)
+
+
+# --------- EMOTIONS ---------
+@dp.callback_query(Form.emotions)
+async def emotions(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(emotions=callback.data)
+
+    kb = InlineKeyboardBuilder()
+    for o in ["нет", "иногда мелькают", "крутятся постоянно"]:
+        kb.button(text=o, callback_data=o)
+
+    await callback.message.answer("Мысли сорваться есть?", reply_markup=kb.as_markup())
+    await state.set_state(Form.thoughts)
+
+
+# --------- THOUGHTS ---------
+@dp.callback_query(Form.thoughts)
+async def thoughts(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(thoughts=callback.data)
+
+    kb = InlineKeyboardBuilder()
+    for o in ["контролирую", "шатает", "почти не контролирую"]:
+        kb.button(text=o, callback_data=o)
+
+    await callback.message.answer("Ты контролируешь ситуацию?", reply_markup=kb.as_markup())
+    await state.set_state(Form.control)
+
+
+# --------- CONTROL ---------
+@dp.callback_query(Form.control)
+async def control(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(control=callback.data)
+
+    kb = InlineKeyboardBuilder()
+    for o in ["выйду", "отвлекусь", "позвоню", "подышу", "ничего"]:
+        kb.button(text=o, callback_data=o)
+
+    await callback.message.answer("Что сделаешь сейчас?", reply_markup=kb.as_markup())
+    await state.set_state(Form.action)
+
+
+# --------- ACTION ---------
+@dp.callback_query(Form.action)
+async def action(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.update_data(action=callback.data)
+
     data = await state.get_data()
-    q_idx = data.get("question_idx", 0)
-    yes_count = data.get("yes_count", 0)
 
-    if callback.data == "yes":
-        yes_count += 1
+    level = data.get("level")
+    thoughts = data.get("thoughts")
+    control_val = data.get("control")
+    trigger_val = data.get("trigger")
 
-    next_q_idx = q_idx + 1
-
-    if next_q_idx < len(QUESTIONS):
-        await state.update_data(question_idx=next_q_idx, yes_count=yes_count)
-
-        await callback.message.edit_text(
-            f"Вопрос {next_q_idx + 1}:\n\n{QUESTIONS[next_q_idx]}",
-            reply_markup=get_yes_no_keyboard()
-        )
+    # ---- логика риска ----
+    if level >= 7 or thoughts == "крутятся постоянно" or control_val == "почти не контролирую":
+        risk = "high"
+    elif level >= 4:
+        risk = "medium"
     else:
-        result_text = get_result_text(yes_count)
+        risk = "low"
 
-        kb = InlineKeyboardBuilder()
-        kb.button(text="💬 Разобрать ситуацию", url="https://t.me/voshodkrsk")
-        kb.button(text="📊 Пройти тест снова", callback_data="start_quiz")
-        kb.adjust(1)
+    trigger_text = ""
+    if trigger_val == "стресс":
+        trigger_text = "\nПохоже, тебя задел стресс."
+    elif trigger_val == "одиночество":
+        trigger_text = "\nСейчас тебе не хватает контакта."
+    elif trigger_val == "скука":
+        trigger_text = "\nЭто больше про пустоту."
 
-        await callback.message.edit_text(
-            f"Тест завершен.\n\n"
-            f"Количество ответов 'Да': {yes_count}\n\n"
-            f"{result_text}\n\n"
-            f"👉 Это не просто тест.\n"
-            f"Это реальная картина.\n\n"
-            f"Напиши мне:\n👉 Нужна помощь\n\n"
-            f"Я скажу честно, нужна ли реабилитация.",
-            reply_markup=kb.as_markup()
-        )
-
-        await state.clear()
-
-    await callback.answer()
-
-# -----------------------
-# Результат
-# -----------------------
-def get_result_text(yes_count):
-    if yes_count <= 4:
-        return (
-            "🟢 Пока ситуация не критическая.\n\n"
-            "Но уже есть тревожные сигналы.\n"
-            "Важно не игнорировать их."
-        )
-    elif yes_count <= 9:
-        return (
-            "🟡 Это уже формирующаяся зависимость.\n\n"
-            "Само это не проходит.\n"
-            "Дальше будет сложнее."
-        )
+    if risk == "low":
+        text = "Ты сейчас в контроле. Продолжай."
+    elif risk == "medium":
+        text = "Важно остановиться. Смени место, отвлекись."
     else:
-        return (
-            "🔴 Это уже зависимость.\n\n"
-            "Сам человек не может остановиться.\n"
-            "И здесь нужна реабилитация."
-        )
+        text = "СТОП. Тебя несёт. Срочно выйди или позвони кому-то."
 
-# -----------------------
-# Запуск
-# -----------------------
+    if data.get("action") == "ничего":
+        text += "\n\nЕсли ничего не делать — станет хуже."
+
+    await callback.message.answer(text + trigger_text)
+    await state.clear()
+
+
+# --------- RUN ---------
 async def main():
+    print("🚀 Бот запущен")
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
