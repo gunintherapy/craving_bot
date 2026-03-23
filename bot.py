@@ -34,11 +34,20 @@ class Form(StatesGroup):
 @dp.message(Command("start"))
 async def start(message: types.Message, state: FSMContext):
     kb = InlineKeyboardBuilder()
-    kb.button(text="Начать чек", callback_data="start_check")
+
+    # Первая кнопка — интерактивный дневник
+    kb.button(text="📔 Начать дневник", callback_data="start_check")
+
+    # Вторая кнопка — помощь лично
+    kb.button(text="🤝 Обратиться за помощью", url="https://t.me/your_contact")
+
+    # Расставляем по одной кнопке на строку
+    kb.adjust(1)
+
     await message.answer(
-        "Привет! 👋 Я — твой дневник тяги.\n"
-        "Будем вместе отслеживать моменты, когда у тебя тяга.\n"
-        "Следуй шаг за шагом — и ты не потеряешь контроль! 🔥",
+        "Привет! 👋 Я твой дневник тяги.\n"
+        "Будем вместе отслеживать моменты, когда тянет.\n"
+        "Нажми кнопку ниже, чтобы начать дневник или обратиться за помощью лично!",
         reply_markup=kb.as_markup()
     )
 
