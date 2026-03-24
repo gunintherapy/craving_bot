@@ -49,7 +49,7 @@ async def start(message: types.Message):
         reply_markup=main_kb
     )
 
-# -------- ДНЕВНИК (СТАРТ ОПРОСА) --------
+# -------- ДНЕВНИК --------
 @dp.message(F.text == "📝 Дневник")
 async def diary(message: types.Message, state: FSMContext):
     kb = InlineKeyboardBuilder()
@@ -57,10 +57,13 @@ async def diary(message: types.Message, state: FSMContext):
         kb.button(text=txt, callback_data=f"c_{txt}")
     kb.adjust(2)
 
-    await message.answer("Тебя сейчас тянет?", reply_markup=kb.as_markup())
+    await message.answer(
+        "Шаг 1 из 7\n\nТебя сейчас тянет?",
+        reply_markup=kb.as_markup()
+    )
     await state.set_state(Form.craving)
 
-# -------- CRAVING --------
+# -------- ШАГ 1 --------
 @dp.callback_query(F.data.startswith("c_"))
 async def craving(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -72,12 +75,12 @@ async def craving(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(5)
 
     await callback.message.edit_text(
-        "Насколько сильно? (0–10)",
+        "Шаг 2 из 7\n\nНасколько сильно? (0–10)",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.level)
 
-# -------- LEVEL --------
+# -------- ШАГ 2 --------
 @dp.callback_query(F.data.startswith("l_"))
 async def level(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -89,12 +92,12 @@ async def level(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(2)
 
     await callback.message.edit_text(
-        "Что это запустило?",
+        "Шаг 3 из 7\n\nЧто это запустило?",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.trigger)
 
-# -------- TRIGGER --------
+# -------- ШАГ 3 --------
 @dp.callback_query(F.data.startswith("t_"))
 async def trigger(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -106,12 +109,12 @@ async def trigger(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(2)
 
     await callback.message.edit_text(
-        "Что ты сейчас чувствуешь?",
+        "Шаг 4 из 7\n\nЧто ты сейчас чувствуешь?",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.emotion)
 
-# -------- EMOTION --------
+# -------- ШАГ 4 --------
 @dp.callback_query(F.data.startswith("e_"))
 async def emotion(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -123,12 +126,12 @@ async def emotion(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(3)
 
     await callback.message.edit_text(
-        "Есть мысли сорваться?",
+        "Шаг 5 из 7\n\nЕсть мысли сорваться?",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.thoughts)
 
-# -------- THOUGHTS --------
+# -------- ШАГ 5 --------
 @dp.callback_query(F.data.startswith("th_"))
 async def thoughts(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -140,12 +143,12 @@ async def thoughts(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(3)
 
     await callback.message.edit_text(
-        "Ты контролируешь ситуацию?",
+        "Шаг 6 из 7\n\nТы контролируешь ситуацию?",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.control)
 
-# -------- CONTROL --------
+# -------- ШАГ 6 --------
 @dp.callback_query(F.data.startswith("ctrl_"))
 async def control(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -157,12 +160,12 @@ async def control(callback: types.CallbackQuery, state: FSMContext):
     kb.adjust(2)
 
     await callback.message.edit_text(
-        "Что сделаешь прямо сейчас?",
+        "Шаг 7 из 7\n\nЧто сделаешь прямо сейчас?",
         reply_markup=kb.as_markup()
     )
     await state.set_state(Form.action)
 
-# -------- ACTION --------
+# -------- ФИНАЛ --------
 @dp.callback_query(F.data.startswith("a_"))
 async def action(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -187,7 +190,7 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
 # -------- ПРОЧЕЕ --------
 @dp.message(F.text == "🆘 SOS")
 async def sos(message: types.Message):
-    await message.answer("🆘 СТОП! Срочно смени обстановку или позвони кому-то.")
+    await message.answer("🆘 Срочно смени обстановку или позвони кому-то.")
 
 @dp.message(F.text == "🧘 Техники")
 async def tech(message: types.Message):
@@ -205,7 +208,6 @@ async def main():
     print("🚀 Бот запущен")
 
     await bot.delete_webhook(drop_pending_updates=True)
-
     asyncio.create_task(dp.start_polling(bot))
 
     app = web.Application()
