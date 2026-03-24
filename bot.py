@@ -1,4 +1,4 @@
-Вот мой новый полный код. Скажи мне что думаешь 
+
 import os
 import asyncio
 import logging
