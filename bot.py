@@ -188,10 +188,98 @@ async def action(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
 
 # --- КНОПКИ ---
-@dp.message(F.text == "🆘 SOS")
-async def sos(message: types.Message):
-    await message.answer("🆘 СТОП!\n\n— выйди\n— вода\n— звонок")
+# -------- SOS СЦЕНАРИЙ --------
 
+@dp.message(F.text == "🆘 SOS")
+async def sos_start(message: types.Message):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Сделал. Что дальше?", callback_data="sos_1")
+    kb.adjust(1)
+
+    await message.answer(
+        "СТОП! ЗАМРИ. ✋\n\n"
+        "Прямо сейчас твой мозг пытается тебя обмануть.\n"
+        "Это не ты — это импульс. Он пройдет.\n\n"
+        "ТВОЕ ЗАДАНИЕ:\n"
+        "— уйди в другое место\n"
+        "— умойся холодной водой 3 раза\n\n"
+        "Сделай это прямо сейчас.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ШАГ 2 ---
+@dp.callback_query(F.data == "sos_1")
+async def sos_step_2(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ В реальности. Давай дышать.", callback_data="sos_2")
+    kb.adjust(1)
+
+    await callback.message.edit_text(
+        "Хорошо. Возвращаем тебя в реальность.\n\n"
+        "Техника 5-4-3-2-1:\n\n"
+        "👀 Назови 5 предметов\n"
+        "👂 4 звука\n"
+        "🤝 3 ощущения\n"
+        "👃 2 запаха\n"
+        "👅 1 вкус\n\n"
+        "Делай это прямо сейчас.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ШАГ 3 ---
+@dp.callback_query(F.data == "sos_2")
+async def sos_step_3(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Дыхание в норме. Финал.", callback_data="sos_3")
+    kb.adjust(1)
+
+    await callback.message.edit_text(
+        "Теперь дыхание.\n\n"
+        "Делаем квадрат:\n\n"
+        "1️⃣ Вдох — 4 сек\n"
+        "2️⃣ Задержка — 4 сек\n"
+        "3️⃣ Выдох — 4 сек\n"
+        "4️⃣ Задержка — 4 сек\n\n"
+        "Повтори 4 раза.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ШАГ 4 ---
+@dp.callback_query(F.data == "sos_3")
+async def sos_step_4(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🏠 В меню", callback_data="sos_end")
+    kb.adjust(1)
+
+    await callback.message.edit_text(
+        "Ты выстоял пик. Серьезно.\n\n"
+        "Сейчас важно закрепить:\n\n"
+        "— позвони кому-то\n"
+        "— напиши кому-то\n"
+        "— выпей чай или съешь что-то сладкое\n\n"
+        "Не оставайся один.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ВОЗВРАТ В МЕНЮ ---
+@dp.callback_query(F.data == "sos_end")
+async def sos_end(callback: types.CallbackQuery):
+    await callback.answer()
+
+    await callback.message.edit_text(
+        "Ты справился. 💪\n\n"
+        "Если понадобится — я рядом."
+    )
 @dp.message(F.text == "🧘 Техники")
 async def tech(message: types.Message):
     await message.answer("🧘 Дыхание 4-4-4\nХолодная вода\nСмена обстановки")
