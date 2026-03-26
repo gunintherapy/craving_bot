@@ -280,9 +280,118 @@ async def sos_end(callback: types.CallbackQuery):
         "Ты справился. 💪\n\n"
         "Если понадобится — я рядом."
     )
+# --- ТЕХНИКИ (ИНТЕРАКТИВНОЕ МЕНЮ) ---
+
 @dp.message(F.text == "🧘 Техники")
-async def tech(message: types.Message):
-    await message.answer("🧘 Дыхание 4-4-4\nХолодная вода\nСмена обстановки")
+async def tech_menu(message: types.Message):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🫁 Дыхание", callback_data="tech_breath")
+    kb.button(text="🧊 Холод", callback_data="tech_cold")
+    kb.button(text="🌍 Заземление", callback_data="tech_ground")
+    kb.button(text="🧠 Переключение", callback_data="tech_switch")
+    kb.adjust(1)
+
+    await message.answer(
+        "Выбери технику 👇",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ДЫХАНИЕ ---
+@dp.callback_query(F.data == "tech_breath")
+async def tech_breath(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data="tech_back")
+
+    await callback.message.edit_text(
+        "🫁 ДЫХАНИЕ\n\n"
+        "Сделай 4 цикла:\n"
+        "— вдох 4 сек\n"
+        "— пауза 4 сек\n"
+        "— выдох 4 сек\n"
+        "— пауза 4 сек\n\n"
+        "Сделай это прямо сейчас.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ХОЛОД ---
+@dp.callback_query(F.data == "tech_cold")
+async def tech_cold(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data="tech_back")
+
+    await callback.message.edit_text(
+        "🧊 ХОЛОД\n\n"
+        "Сделай прямо сейчас:\n"
+        "— умойся холодной водой\n"
+        "или\n"
+        "— подержи руки под холодной водой\n\n"
+        "Это быстро снижает тягу.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ЗАЗЕМЛЕНИЕ ---
+@dp.callback_query(F.data == "tech_ground")
+async def tech_ground(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data="tech_back")
+
+    await callback.message.edit_text(
+        "🌍 ЗАЗЕМЛЕНИЕ\n\n"
+        "Назови вслух:\n"
+        "5 — что видишь\n"
+        "4 — что слышишь\n"
+        "3 — что чувствуешь\n"
+        "2 — запаха\n"
+        "1 — вкус\n\n"
+        "Это вернет тебя в реальность.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- ПЕРЕКЛЮЧЕНИЕ ---
+@dp.callback_query(F.data == "tech_switch")
+async def tech_switch(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data="tech_back")
+
+    await callback.message.edit_text(
+        "🧠 ПЕРЕКЛЮЧЕНИЕ\n\n"
+        "Сделай прямо сейчас:\n"
+        "— выйди из помещения\n"
+        "— начни движение\n"
+        "— заговори с кем-то\n\n"
+        "Тяга усиливается в бездействии.",
+        reply_markup=kb.as_markup()
+    )
+
+
+# --- НАЗАД В МЕНЮ ТЕХНИК ---
+@dp.callback_query(F.data == "tech_back")
+async def tech_back(callback: types.CallbackQuery):
+    await callback.answer()
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🫁 Дыхание", callback_data="tech_breath")
+    kb.button(text="🧊 Холод", callback_data="tech_cold")
+    kb.button(text="🌍 Заземление", callback_data="tech_ground")
+    kb.button(text="🧠 Переключение", callback_data="tech_switch")
+    kb.adjust(1)
+
+    await callback.message.edit_text(
+        "Выбери технику 👇",
+        reply_markup=kb.as_markup()
+    )
 
 @dp.message(F.text == "📊 Прогресс")
 async def progress(message: types.Message):
